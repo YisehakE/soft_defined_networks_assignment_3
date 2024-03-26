@@ -23,7 +23,8 @@ class Controller(EventMixin):
     def __init__(self):
         self.listenTo(core.openflow)
         core.openflow_discovery.addListeners(self)
-        self.FIREWALL_POLICIES = []
+
+        self.FIREWALL_POLICIES = [] # MY TODO: Figure out how to actualize this into the class for event handler for connection
         
     # You can write other functions as you need.
         
@@ -31,37 +32,43 @@ class Controller(EventMixin):
     def _handle_PacketIn (self, event):    
         
     	# install entries to the route table
-        def install_enqueue(event, packet, outport, q_id):
-             
-             msg = of.ofp_flow_mod()
+        def install_enqueue(event, packet, outport, q_id): 
+          msg = of.ofp_flow_mod()
 
-             of.ofo_action_enqueue(outport = outport, queue_id=q_id)
+          parsed_pkt = packet.parsed 
 
+          of.ofo_action_enqueue(outport = outport, 
+                                queue_id=q_id)
           
 
     	# Check the packet and decide how to route the packet
         def forward(message = None):
-            
-            if message:
-              print("Message content: ", message)
+          print("Message content[FORWARD]: ", message)
+          log.debug("Message content [FORWARD]", message)
 
-              #TODO: extract values from message
-            else:
-              print("No message!")
+          if message:
+            print("Message content: ", message)
+
+            #TODO: extract values from message
+          else:
+            print("No message!")
             
 
 
         # When it knows nothing about the destination, flood but don't install the rule
         def flood (message = None):
-            # define your message here
+          print("Message content [FLOOD]: ", message)
+          log.debug("Message content [FORWARD]", message)
 
-            message
 
-            event.
+          # define your message here
+          msg = of.ofp_flow_mod()
 
-            # ofp_action_output: forwarding packets out of a physical or virtual port
-            # OFPP_FLOOD: output all openflow ports expect the input port and those with flooding disabled via the OFPPC_NO_FLOOD port config bit
-            msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+          # ofp_action_output: forwarding packets out of a physical or virtual port
+          # OFPP_FLOOD: output all openflow ports expect the input port and those with flooding disabled via the OFPPC_NO_FLOOD port config bit
+
+          # Essentially, somewhat like ff:ff:ff:ff:ff or 255.255.255.0 as the broadcast address in ARP or DHCP
+          msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
 
 
         
@@ -71,21 +78,25 @@ class Controller(EventMixin):
 
 
     def _handle_ConnectionUp(self, event):
-        dpid = dpid_to_str(event.dpid)
-        log.debug("Switch %s has come up.", dpid)
-        
-        # Send the firewall policies to the switch
-        def sendFirewallPolicy(connection, policy):
-            # define your message here
-            
-            # OFPP_NONE: outputting to nowhere
-            # msg.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
-            
-            pass
+
+      # Extract DPID to post as log notifying that switch is online
+      dpid = dpid_to_str(event.dpid)
+      log.debug("Switch %s has come up.", dpid)
+      
+      # Send the firewall policies to the switch
+      def sendFirewallPolicy(connection, policy):
+          # define your message here
+          
+          # OFPP_NONE: outputting to nowhere
+          # msg.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
+          
+          pass
 
 
-        for policy in self.FIREWALL_POLICIES:
-          sendFirewallPolicy(event.connection, policy)
+      for policy in self.FIREWALL_POLICIES:
+        sendFirewallPolicy(event.connection, policy)
+
+      event.connection.send(msg)
             
 
 def launch():
