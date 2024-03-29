@@ -25,7 +25,6 @@ TODO(s) to account for
   TODO #1 - See if I have to change the self.addLink(SWITCH, HOST, BW) to remove BW portion to account for QoS queues 
   TODO #2 - 
 
-
 '''
 
 class TreeTopo(Topo):		
@@ -53,11 +52,13 @@ class TreeTopo(Topo):
 
 
     def build(self):
+      file = sys.argv[1] if len(sys.argv) > 1 else 'topology.in'
+
       # Read file contents
-      topo_f = open(sys.argv[1],"r")
+      topo_f = open(file, "r")
       topo_contents = topo_f.read().split()
       host, switch, link, linksInfo = self.getTopoContent(topo_contents)
-
+      
       print("Hosts: " + host)
       print("switch: " + switch)
       print("links: " + link)
@@ -117,7 +118,8 @@ def setup_QoS():
 def startNetwork():
     info('** Creating the tree network\n')
     topo = TreeTopo()
-    controllerIP = sys.argv[2]
+
+    controllerIP = sys.argv[2] if len(sys.argv) > 2 else '0.0.0.0'
 
     global net
     net = Mininet(topo=topo, 
@@ -128,31 +130,10 @@ def startNetwork():
 
     info('** Starting the network\n')
     net.start()
-
-
-    # SCRAP CODE
-    ################################################
-    # TODO: SEE IF THESE EXTRA TEST ARE NEDEED 
-    # print("Dumping host connections")
-    # dumpNodeConnections( net.hosts )
-
-    # print("Testing network connectivity")
-    # net.pingAll()
-    ################################################
         
-    policy_f = open(sys.argv[3],"r")
-    policy_contents = policy_f.read().split()
-    n_rules, m_hosts, rules, hosts = TreeTopo.getPolicyContent(policy_contents)
-
-
-    print("N =  ", n_rules)
-    print("M =  ", m_hosts)
-    print("rules: ", str(rules))
-    print("hosts: ", str(hosts))
 
 
     # Create QoS Queues
-    # SCRAP CODE
     ################################################
     # os.system('sudo ovs-vsctl -- set Port [INTERFACE] qos=@newqos \
     #            -- --id=@newqos create QoS type=linux-htb other-config:max-rate=[LINK SPEED] queues=0=@q0,1=@q1,2=@q2 \
@@ -160,9 +141,6 @@ def startNetwork():
     #            -- --id=@q1 create queue other-config:min-rate=[X] \
     #            -- --id=@q2 create queue other-config:max-rate=[Y]')
     ################################################
-
-
-    setup_QoS() # TODO: see if I would eventually need to add arguments 
     
 
     info('** Running CLI\n')

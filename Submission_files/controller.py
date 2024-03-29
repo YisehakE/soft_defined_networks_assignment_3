@@ -52,6 +52,13 @@ class Controller(EventMixin):
 
 
         self.FIREWALL_POLICIES = [] # MY TODO: Figure out how to actualize this into the class for event handler for connection
+        self.premium_hosts = []
+
+
+        self.
+
+
+        self.FIREWALL_POLICIES = {} # Set contain
         
 
     
@@ -80,105 +87,100 @@ class Controller(EventMixin):
     ######################################################################################
         
     def _handle_PacketIn (self, event):    
+      
+      pkt, pkt_in = event.parsed, event.ofp # Parsed packet data | The actual packet
+      src_mac, dest_mac = pkt.src, pkt.dst # Mac source address  | Mac destination address
+      src_port, dpid = event.port, dpid_to_str(event.dpid)
+
+      log.debug("packet: dpid: %s, src: %s, dst: %s, port: %s" % (dpid, src_mac, dest_mac, src_port))
+
+      # install entries to the route table
+      def install_enqueue(event, packet, outport, q_id): 
+
+        # Initialize/create message using flow modification table 
+        # (Ref. OpenFlow in POX -> OpenFlow Messages -> ofp_flow_mod ) https://noxrepo.github.io/pox-doc/html/#ofp-flow-mod-flow-table-modification)
+        msg = of.ofp_flow_mod()
+
+        # Set the match structure to given packet with the input port obtained from the raised event
+        # (Ref. OpenFlow in POX -> Match Structure -> ofp_match methods) https://noxrepo.github.io/pox-doc/html/#ofp-match-methods)
+        msg.match = of.ofp_match.from_packet(packet, event.port)
+
+        # Create action for enqueuing actions in flow table
+        # (Ref. OpenFlow in POX -> Match Structure -> ofp_match methods) https://noxrepo.github.io/pox-doc/html/#ofp-match-methods)
+        enqueue_action = of.ofo_action_enqueue(port = outport, 
+                                                queue_id=q_id)
+        msg.actions.append(enqueue_action)
         
-    	# install entries to the route table
-        def install_enqueue(event, packet, outport, q_id): 
 
-          # TODO 3 - Attach a reference mark to the documentation where commands were found
-
-          # Initialize/create message using flow modification table 
-          # (Ref. OpenFlow in POX -> OpenFlow Messages -> ofp_flow_mod ) https://noxrepo.github.io/pox-doc/html/#ofp-flow-mod-flow-table-modification)
-          msg = of.ofp_flow_mod()
-
-          # Set the match structure to given packet with the input port obtained from the raised event
-          # (Ref. OpenFlow in POX -> Match Structure -> ofp_match methods) https://noxrepo.github.io/pox-doc/html/#ofp-match-methods)
-          msg.match = of.ofp_match.from_packet(packet, event.port)
-
-
-          # Create action for enqueuing actions in flow table
-          # (Ref. OpenFlow in POX -> Match Structure -> ofp_match methods) https://noxrepo.github.io/pox-doc/html/#ofp-match-methods)
-          enqueue_action = of.ofo_action_enqueue(port = outport, 
-                                                 queue_id=q_id)
-          msg.actions.append(enqueue_action)
-          
-
-          # Send this message from this switch to the controller 
-          event.connection.send(msg)
-          
+        # Send this message from this switch to the controller 
+        event.connection.send(msg)
+        
 
     	# Check the packet and decide how to route the packet
-        def forward(message = None):
-          print("Message content[FORWARD]: ", message)
-          log.debug("Message content [FORWARD]", message)
+      def forward(message = None):
+        print("Message content[FORWARD]: ", message)
+        log.debug("Message content [FORWARD]", message)
 
-          pkt = event.parsed # TODO 2 - Find the function to parse packet using POX 
+        pkt = event.parsed # TODO 2 - Find the function to parse packet using POX 
 
-          # Check what protocol the packet is
-          if self.is_packet_IP(pkt):
-            # TODO: figure out how 
+        # Check what protocol the packet is
+        if self.is_packet_IP(pkt):
+          # TODO: figure out how 
 
-            # Check to see if packet falls under any of the firewall policies 
-            src_addr = pkt.srcip
-            dst_addr = pkt.dstip
+          # Check to see if packet falls under any of the firewall policies 
+          src_addr = pkt.srcip
+          dst_addr = pkt.dstip
 
 
-            if (dst_addr, PORT) in self.FIREWALL_POLICIES: # 1st type of firewall 
-               pass
-            elif (src_addr, dst_addr, PORT) in self.FIREWALL_POLICIES: # 2nd type of firewall
-               pass
-            else:
-            
-              # TODO: see what & how to send this message OR packet if it's safe from firewall restrictions
-              # Send this message from this switch to the controller 
-              event.connection.send(message)
-            
+          if (dst_addr, PORT) in self.FIREWALL_POLICIES: # 1st type of firewall 
+              pass
+          elif (src_addr, dst_addr, PORT) in self.FIREWALL_POLICIES: # 2nd type of firewall
+              pass
           else:
-                # TODO: figure out if 1) this would ever be the case and 2) what to do if pkt is NOT IP
-             pass
-              
           
+            # TODO: see what & how to send this message OR packet if it's safe from firewall restrictions
+            # Send this message from this switch to the controller 
+            event.connection.send(message)
           
-          # # TODO: see what format the message would come in 
-          # # TODO: see if checking message is necessary
-          # if message:
-          #   print("Message content: ", message)
-
-          #   #TODO: extract values from message
-          # else:
-          #   print("No message!")
-
-
-          event.connection.send(msg)
-
+        else:
+              # TODO: figure out if 1) this would ever be the case and 2) what to do if pkt is NOT IP
+            pass
             
-
-
-        # When it knows nothing about the destination, flood but don't install the rule
-        def flood (message = None):
-          print("Message content [FLOOD]: ", message)
-          log.debug("Message content [FORWARD]", message)
-
-          # define your message here
-          msg = of.ofp_flow_mod()
-
-          if not message.match.dl or (not message.match.nw_dst and not message.match.tp_dst):
-            # Case 1: Nothing is known about the destination from the message match structure
-            # Essentially, somewhat like ff:ff:ff:ff:ff or 255.255.255.0 as the broadcast address in ARP or DHCP
-            msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-  
-          else:
-             # Case 2: Message destination is known from match structure 
-            msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-            pkt = event.parsed
-            install_enqueue(event, pkt, event.)
         
 
-          # ofp_action_output: forwarding packets out of a physical or virtual port
-          # OFPP_FLOOD: output all openflow ports expect the input port and those with flooding disabled via the OFPPC_NO_FLOOD port config bit
+        event.connection.send(msg)
 
-          # Essentially, somewhat like ff:ff:ff:ff:ff or 255.255.255.0 as the broadcast address in ARP or DHCP
-          msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-        
+            
+
+
+      # When it knows nothing about the destination, flood but don't install the rule
+      def flood (message = None):
+        print("Message content [FLOOD]: ", message)
+        log.debug("Message content [FORWARD]", message)
+
+        # define your message here
+        msg = of.ofp_packet_out()
+        msg.data = packet_in
+
+
+        # if not message.match.dl or (not message.match.nw_dst and not message.match.tp_dst):
+        #   # Case 1: Nothing is known about the destination from the message match structure
+        #   # Essentially, somewhat like ff:ff:ff:ff:ff or 255.255.255.0 as the broadcast address in ARP or DHCP
+        #   msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+
+        # else:
+        #    # Case 2: Message destination is known from match structure 
+        #   msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+        #   pkt = event.parsed
+        #   install_enqueue(event, pkt, event.)
+      
+
+        # ofp_action_output: forwarding packets out of a physical or virtual port
+        # OFPP_FLOOD: output all openflow ports expect the input port and those with flooding disabled via the OFPPC_NO_FLOOD port config bit
+
+        # Essentially, somewhat like ff:ff:ff:ff:ff or 255.255.255.0 as the broadcast address in ARP or DHCP
+        msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+      
 
 
 
