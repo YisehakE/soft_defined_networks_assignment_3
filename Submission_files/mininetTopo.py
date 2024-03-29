@@ -18,23 +18,54 @@ from mininet.util import irange,dumpNodeConnections
 
 net = None
 
+
+'''
+TODO(s) to account for
+
+  TODO #1 - See if I have to change the self.addLink(SWITCH, HOST, BW) to remove BW portion to account for QoS queues 
+  TODO #2 - 
+
+
+'''
+
 class TreeTopo(Topo):		
     def __init__(self):
 		# Initialize topology
             Topo.__init__(self)
     
-    def getContents(self, contents):
+    def getTopoContent(self, contents):
         hosts = contents[0]
         switch = contents[1]
         links = contents[2]
         linksInfo = contents[3:]
         return hosts, switch, links, linksInfo
+    
+	  # You can write other functions as you need.
+
+    # Add hosts
+      # > self.addHost('h%d' % [HOST NUMBER])
+        
+    # Add switches
+      # > sconfig = {'dpid': "%016x" % [SWITCH NUMBER]}
+      # > self.addSwitch('s%d' % [SWITCH NUMBER], **sconfig)
+
+    # Add links
+      # > self.addLink([HOST1], [HOST2])
+      
+    def getPolicyContent(self, contents):
+      n_rules = int(contents[0])
+      m_hosts = int(contents[1])
+      rules = contents[2:2 + n_rules]
+      hosts = contents[2 + n_rules:]
+
+      return n_rules, m_hosts, rules, hosts
+
 
     def build(self):
       # Read file contents
-      f = open(sys.argv[1],"r")
-      contents = f.read().split()
-      host, switch, link, linksInfo = self.getContents(contents)
+      topo_f = open(sys.argv[1],"r")
+      topo_contents = topo_f.read().split()
+      host, switch, link, linksInfo = self.getTopoContent(topo_contents)
 
       print("Hosts: " + host)
       print("switch: " + switch)
@@ -57,22 +88,23 @@ class TreeTopo(Topo):
         host = info[0]
         switch = info[1]
         bandwidth = int(info[2])
-        self.addLink(host, switch, bw=bandwidth)
-            
+        self.addLink(host, switch, bw=bandwidth) # TODO #1
 
-	
-	# You can write other functions as you need.
 
-	# Add hosts
-    # > self.addHost('h%d' % [HOST NUMBER])
+      ################################################
         
+      policy_f = open(sys.argv[3],"r")
+      policy_contents = policy_f.read().split()
+      n_rules, m_hosts, rules, hosts = self.getPolicyContent(policy_contents)
 
-	# Add switches
-    # > sconfig = {'dpid': "%016x" % [SWITCH NUMBER]}
-    # > self.addSwitch('s%d' % [SWITCH NUMBER], **sconfig)
 
-	# Add links
-	# > self.addLink([HOST1], [HOST2])
+      print("N =  ", n_rules)
+      print("M =  ", m_hosts)
+      print("rules: ", str(rules))
+      print("hosts: ", str(hosts))
+
+
+      
 
 def startNetwork():
     info('** Creating the tree network\n')

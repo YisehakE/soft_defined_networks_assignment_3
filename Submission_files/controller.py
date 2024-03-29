@@ -19,14 +19,43 @@ from pox.lib.addresses import IPAddr, EthAddr
 
 log = core.getLogger()
 
+
+'''
+TODO(s) to account for
+
+  TODO #1 - Figure out how to get firewalls to controller (maybe as argument?)
+  TODO #2 - Find the function to parse packet using POX 
+  TODO #3 - 
+
+
+'''
 class Controller(EventMixin):
+    
+    # def getPolicyContent(self, contents):
+    #   n_rules = int(contents[0])
+    #   m_hosts = int(contents[1])
+    #   rules = contents[2:2 + n_rules]
+    #   hosts = contents[2 + n_rules:]
+
+    #   return n_rules, m_hosts, rules, hosts
+
     def __init__(self):
         self.listenTo(core.openflow)
         core.openflow_discovery.addListeners(self)
 
+
         self.FIREWALL_POLICIES = [] # MY TODO: Figure out how to actualize this into the class for event handler for connection
         
     # You can write other functions as you need.
+        
+    def getPolicyContent(self, contents):
+      n_rules = int(contents[0])
+      m_hosts = int(contents[1])
+      rules = contents[2:2 + n_rules]
+      hosts = contents[2 + n_rules:]
+
+      return n_rules, m_hosts, rules, hosts
+
         
         
     def _handle_PacketIn (self, event):    
@@ -35,10 +64,16 @@ class Controller(EventMixin):
         def install_enqueue(event, packet, outport, q_id): 
           msg = of.ofp_flow_mod()
 
-          parsed_pkt = packet.parsed 
+          # parsed_pkt = event.parsed() # TODO 2 - Find the function to parse packet using POX 
 
-          of.ofo_action_enqueue(outport = outport, 
+          enqueue_action = of.ofo_action_enqueue(port = outport, 
                                 queue_id=q_id)
+          
+          
+          msg.match = of.ofp_match.from_packet(packet, event.port)
+          msg.actions.append(enqueue_action)
+          
+          event.connection.send(msg)
           
 
     	# Check the packet and decide how to route the packet
@@ -46,6 +81,10 @@ class Controller(EventMixin):
           print("Message content[FORWARD]: ", message)
           log.debug("Message content [FORWARD]", message)
 
+          packet = event.parsed 
+
+
+          if packet.TYPE == 
           if message:
             print("Message content: ", message)
 
@@ -69,10 +108,11 @@ class Controller(EventMixin):
 
           # Essentially, somewhat like ff:ff:ff:ff:ff or 255.255.255.0 as the broadcast address in ARP or DHCP
           msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
-
-
         
-        forward()
+
+
+
+        forward(event.ofp)
 
 
 
@@ -83,14 +123,31 @@ class Controller(EventMixin):
       dpid = dpid_to_str(event.dpid)
       log.debug("Switch %s has come up.", dpid)
       
+
+      # TODO #1 - Figure out how to get firewalls to controller (maybe as argument?)
+      policy_f = open(sys.argv[3],"r")
+      policy_contents = policy_f.read().split()
+      n_rules, m_hosts, rules, hosts = self.getPolicyContent(policy_contents)
+
+
+      print("N =  ", n_rules)
+      print("M =  ", m_hosts)
+      print("rules: ", str(rules))
+      print("hosts: ", str(hosts))
+
       # Send the firewall policies to the switch
       def sendFirewallPolicy(connection, policy):
           # define your message here
+
+          msg = of.flood_mod()
+
+          msg
           
           # OFPP_NONE: outputting to nowhere
           # msg.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
           
           pass
+
 
 
       for policy in self.FIREWALL_POLICIES:
