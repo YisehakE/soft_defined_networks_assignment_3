@@ -40,18 +40,8 @@ class TreeTopo(Topo):
         linksInfo = contents[3:]
         return hosts, switch, links, linksInfo
     
-	  # You can write other functions as you need.
-
-    # Add hosts
-      # > self.addHost('h%d' % [HOST NUMBER])
-        
-    # Add switches
-      # > sconfig = {'dpid': "%016x" % [SWITCH NUMBER]}
-      # > self.addSwitch('s%d' % [SWITCH NUMBER], **sconfig)
-
-    # Add links
-      # > self.addLink([HOST1], [HOST2])
-      
+	  # HELPER FUNCTIONS: You can write other functions as you need (IN CLASS)
+    ######################################################################################
     def getPolicyContent(self, contents):
       n_rules = int(contents[0])
       m_hosts = int(contents[1])
@@ -59,6 +49,7 @@ class TreeTopo(Topo):
       hosts = contents[2 + n_rules:]
 
       return n_rules, m_hosts, rules, hosts
+    ######################################################################################
 
 
     def build(self):
@@ -91,20 +82,37 @@ class TreeTopo(Topo):
         self.addLink(host, switch, bw=bandwidth) # TODO #1
 
 
-      ################################################
+# HELPER FUNCTIONS:You can write other functions as you need (OUTSIDE CLASS)
+######################################################################################
         
-      policy_f = open(sys.argv[3],"r")
-      policy_contents = policy_f.read().split()
-      n_rules, m_hosts, rules, hosts = self.getPolicyContent(policy_contents)
+# TODO: see if I would eventually need to add parameters
+def setup_QoS():
+  # Calculate premium and normal bandwidth based on percentages
+
+  # TODO: Figure out whether LINK_SPEED from host<=>switch is same for all connections, or if it varies
+
+  INTERFACE = 0 # TODO: see if this should be hardcoded, from the sys.argv[3]
+  LINK_SPEED = float("inf") # Total available bandwidth in Mbps 
+  X = int(0.8 * LINK_SPEED) # Premium class rate (i.e >= 0.8 x LINK_SPEED)
+  Y = int(0.5 * LINK_SPEED) # Regular class rate (i.e <= 0.5 x LINK SPEED)
+
+  # Configure QoS queues using ovs-vsctl
 
 
-      print("N =  ", n_rules)
-      print("M =  ", m_hosts)
-      print("rules: ", str(rules))
-      print("hosts: ", str(hosts))
+  # Create QoS Queues
+  os.system('sudo ovs-vsctl -- set Port {} qos=@newqos \
+            -- --id=@newqos create QoS type=linux-htb other-config:max-rate={} queues=0=@q0,1=@q1,2=@q2 \
+            -- --id=@q0 create queue other-config:max-rate={}} other-config:min-rate={} \
+            -- --id=@q1 create queue other-config:min-rate={} \
+            -- --id=@q2 create queue other-config:max-rate={}').format(LINK_SPEED,
+                                                                       LINK_SPEED,
+                                                                       LINK_SPEED,
+                                                                       X,
+                                                                       Y)
+
+######################################################################################
 
 
-      
 
 def startNetwork():
     info('** Creating the tree network\n')
@@ -121,25 +129,45 @@ def startNetwork():
     info('** Starting the network\n')
     net.start()
 
-    print("Dumping host connections")
-    dumpNodeConnections( net.hosts )
 
-    print("Testing network connectivity")
-    net.pingAll()
+    # SCRAP CODE
+    ################################################
+    # TODO: SEE IF THESE EXTRA TEST ARE NEDEED 
+    # print("Dumping host connections")
+    # dumpNodeConnections( net.hosts )
+
+    # print("Testing network connectivity")
+    # net.pingAll()
+    ################################################
+        
+    policy_f = open(sys.argv[3],"r")
+    policy_contents = policy_f.read().split()
+    n_rules, m_hosts, rules, hosts = TreeTopo.getPolicyContent(policy_contents)
+
+
+    print("N =  ", n_rules)
+    print("M =  ", m_hosts)
+    print("rules: ", str(rules))
+    print("hosts: ", str(hosts))
+
 
     # Create QoS Queues
-    os.system('sudo ovs-vsctl -- set Port [INTERFACE] qos=@newqos \
-               -- --id=@newqos create QoS type=linux-htb other-config:max-rate=[LINK SPEED] queues=0=@q0,1=@q1,2=@q2 \
-               -- --id=@q0 create queue other-config:max-rate=[LINK SPEED] other-config:min-rate=[LINK SPEED] \
-               -- --id=@q1 create queue other-config:min-rate=[X] \
-               -- --id=@q2 create queue other-config:max-rate=[Y]')
+    # SCRAP CODE
+    ################################################
+    # os.system('sudo ovs-vsctl -- set Port [INTERFACE] qos=@newqos \
+    #            -- --id=@newqos create QoS type=linux-htb other-config:max-rate=[LINK SPEED] queues=0=@q0,1=@q1,2=@q2 \
+    #            -- --id=@q0 create queue other-config:max-rate=[LINK SPEED] other-config:min-rate=[LINK SPEED] \
+    #            -- --id=@q1 create queue other-config:min-rate=[X] \
+    #            -- --id=@q2 create queue other-config:max-rate=[Y]')
+    ################################################
+
+
+    setup_QoS() # TODO: see if I would eventually need to add arguments 
     
 
     info('** Running CLI\n')
-
     print()
     CLI(net)
-
 
     net.stop()
 
@@ -160,26 +188,3 @@ if __name__ == '__main__':
     # Tell mininet to print useful information
     setLogLevel('info')
     startNetwork()
-
-
-
-
-	
-	# # You can write other functions as you need.
-
-	# # Add hosts
-  #   # > self.addHost('h%d' % [HOST NUMBER])
-
-	# # Add switches
-  #   def build_switch(self, switches):
-  #     # Add switch
-  #     for x in range(1, int(switches) + 1):
-  #       sconfig = {'dpid': "%016x" % x}
-  #       self.addSwitch('s%d' % x, **sconfig)
-  #     # > sconfig = {'dpid': "%016x" % [SWITCH NUMBER]}
-  #     # > self.addSwitch('s%d' % [SWITCH NUMBER], **sconfig)
-
-	# # Add links
-        
-  #   def build_link(self,)
-	# # > self.addLink([HOST1], [HOST2])
