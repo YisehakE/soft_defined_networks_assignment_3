@@ -111,12 +111,12 @@ def setup_QoS(bw, switch, port):
             -- --id=@newqos create QoS type=linux-htb other-config:max-rate={} queues=0=@q0,1=@q1,2=@q2 \
             -- --id=@q0 create queue other-config:max-rate={}} other-config:min-rate={} \
             -- --id=@q1 create queue other-config:min-rate={} \
-            -- --id=@q2 create queue other-config:max-rate={}').format(INTERFACE,
+            -- --id=@q2 create queue other-config:max-rate={}'.format(INTERFACE,
                                                                        LINK_SPEED,
                                                                        bw,
                                                                        bw,
                                                                        X,
-                                                                       Y)
+                                                                       Y))
 
 ######################################################################################
 
