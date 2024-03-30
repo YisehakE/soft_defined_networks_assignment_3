@@ -99,7 +99,7 @@ class TreeTopo(Topo):
 ######################################################################################
 def setup_QoS(bw, switch, port):
   # Calculate premium and normal bandwidth based on percentages
-  INTERFACE = '{}-eth{}' % (switch, port) 
+  INTERFACE = '{}-eth{}'.format(switch, port) 
   LINK_SPEED = bw * 10**6 # Total available bandwidth in Mbps 
 
   X = int(0.8 * bw) # Premium class rate (i.e >= 0.8 x bw)
