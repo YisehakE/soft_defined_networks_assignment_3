@@ -30,24 +30,36 @@ TODO(s) to account for
 class TreeTopo(Topo):		
     def __init__(self):
 		# Initialize topology
-            Topo.__init__(self)
+      Topo.__init__(self)
     
     def getTopoContent(self, contents):
         hosts = contents[0]
         switch = contents[1]
         links = contents[2]
-        linksInfo = contents[3:]
-        return hosts, switch, links, linksInfo
+        links_content = contents[3:]
+
+        self.parsed_link_map = {}
+        for info in links_content:
+          link = info.split(',')
+          node_client = link[0]
+          node_switch = link[1]
+          bw = link[2]
+
+          if node_client not in self.parsed_link_map:
+              self.parsed_link_map[node_client] = {}
+          if node_client not in self.parsed_link_map:
+              self.parsed_link_map[node_switch] = {}
+          
+        
+          self.parsed_link_map[node_client][node_switch] = int(bw)
+          self.parsed_link_map[node_switch][node_client] = int(bw)
+
+        return hosts, switch, links, links_content
     
 	  # HELPER FUNCTIONS: You can write other functions as you need (IN CLASS)
     ######################################################################################
-    def getPolicyContent(self, contents):
-      n_rules = int(contents[0])
-      m_hosts = int(contents[1])
-      rules = contents[2:2 + n_rules]
-      hosts = contents[2 + n_rules:]
 
-      return n_rules, m_hosts, rules, hosts
+
     ######################################################################################
 
 
@@ -80,39 +92,53 @@ class TreeTopo(Topo):
         host = info[0]
         switch = info[1]
         bandwidth = int(info[2])
-        self.addLink(host, switch, bw=bandwidth) # TODO #1
+        self.addLink(host, switch)
 
 
 # HELPER FUNCTIONS:You can write other functions as you need (OUTSIDE CLASS)
 ######################################################################################
-        
-# TODO: see if I would eventually need to add parameters
-def setup_QoS():
+def setup_QoS(bw, switch, port):
   # Calculate premium and normal bandwidth based on percentages
+  INTERFACE = '{}-eth{}' % (switch, port) 
+  LINK_SPEED = bw * 10**6 # Total available bandwidth in Mbps 
 
-  # TODO: Figure out whether LINK_SPEED from host<=>switch is same for all connections, or if it varies
-
-  INTERFACE = 0 # TODO: see if this should be hardcoded, from the sys.argv[3]
-  LINK_SPEED = float("inf") # Total available bandwidth in Mbps 
-  X = int(0.8 * LINK_SPEED) # Premium class rate (i.e >= 0.8 x LINK_SPEED)
-  Y = int(0.5 * LINK_SPEED) # Regular class rate (i.e <= 0.5 x LINK SPEED)
+  X = int(0.8 * bw) # Premium class rate (i.e >= 0.8 x bw)
+  Y = int(0.5 * bw) # Regular class rate (i.e <= 0.5 x bw)
 
   # Configure QoS queues using ovs-vsctl
-
-
   # Create QoS Queues
   os.system('sudo ovs-vsctl -- set Port {} qos=@newqos \
             -- --id=@newqos create QoS type=linux-htb other-config:max-rate={} queues=0=@q0,1=@q1,2=@q2 \
             -- --id=@q0 create queue other-config:max-rate={}} other-config:min-rate={} \
             -- --id=@q1 create queue other-config:min-rate={} \
-            -- --id=@q2 create queue other-config:max-rate={}').format(LINK_SPEED,
+            -- --id=@q2 create queue other-config:max-rate={}').format(INTERFACE,
                                                                        LINK_SPEED,
-                                                                       LINK_SPEED,
+                                                                       bw,
+                                                                       bw,
                                                                        X,
                                                                        Y)
 
 ######################################################################################
 
+def allocate_queues(topo):
+    for link in topo.links(sort=True, withKeys=False, withInfo=True):
+        host, switch, info = link
+
+        print("\n(" + host + "---" + switch + "):")
+
+        port_1 = info['port1']
+        port_2 = info['port2']
+
+        node_1 = info['node1']
+        node_2 = info['node2']
+        bw = topo.linksInfo[node_1][node_2]
+
+        print('%s@Port%i is connected with bandwith of %i to %s@Port%i' %(node_1, port_1, bw, node_2, port_2))
+        
+        setup_QoS(bw, node_1, port_1)
+        setup_QoS(bw, node_2, port_2)
+
+######################################################################################
 
 
 def startNetwork():
@@ -130,8 +156,6 @@ def startNetwork():
 
     info('** Starting the network\n')
     net.start()
-        
-
 
     # Create QoS Queues
     ################################################
@@ -141,7 +165,8 @@ def startNetwork():
     #            -- --id=@q1 create queue other-config:min-rate=[X] \
     #            -- --id=@q2 create queue other-config:max-rate=[Y]')
     ################################################
-    
+
+    allocate_queues(topo)
 
     info('** Running CLI\n')
     print()
