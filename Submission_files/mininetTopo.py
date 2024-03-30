@@ -131,7 +131,7 @@ def allocate_queues(topo):
 
         node_1 = info['node1']
         node_2 = info['node2']
-        bw = topo.linksInfo[node_1][node_2]
+        bw = topo.parsed_link_map[node_1][node_2]
 
         print('%s@Port%i is connected with bandwith of %i to %s@Port%i' %(node_1, port_1, bw, node_2, port_2))
         
