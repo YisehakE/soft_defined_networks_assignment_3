@@ -7,17 +7,17 @@ import sys
 import os
 #Sfrom sets import Set
 
-from pox.pox.core import core
+from core import core
 
-import pox.pox.openflow.libopenflow_01 as of
-import pox.pox.openflow.discovery
-import pox.pox.openflow.spanning_forest
+import openflow.libopenflow_01 as of
+import openflow.discovery
+import openflow.spanning_forest
 
-from pox.pox.lib.revent import *
-from pox.pox.lib.util import dpid_to_str
-from pox.pox.lib.addresses import IPAddr, EthAddr
+from lib.revent import *
+from lib.util import dpid_to_str
+from lib.addresses import IPAddr, EthAddr
 
-import pox.pox.lib.packet as packet
+import lib.packet as packet
 
 log = core.getLogger()
 
