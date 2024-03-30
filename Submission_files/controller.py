@@ -89,7 +89,7 @@ class ControllerPolicy():
     
   def parse(self):
       
-      policy_f = open("policy.in", "r")
+      policy_f = open(sys.argv[1], "r")
       policy_contents = policy_f.read().split()
       n_rules, m_hosts, rules, hosts = self.get_policy_content(policy_contents)
       log.info(policy_contents)
@@ -114,6 +114,8 @@ class Controller(EventMixin):
         self.switch_mac_to_port_map = {} # Table to record origins
    
         self.TTL = 30
+
+        log.debug("System arguments %s" % (str(sys.argv)))
    
     
     # You can write other functions as you need.
