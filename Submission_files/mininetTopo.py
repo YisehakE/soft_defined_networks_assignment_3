@@ -47,7 +47,7 @@ class TreeTopo(Topo):
 
           if node_client not in self.parsed_link_map:
               self.parsed_link_map[node_client] = {}
-          if node_client not in self.parsed_link_map:
+          if node_switch not in self.parsed_link_map:
               self.parsed_link_map[node_switch] = {}
           
         
