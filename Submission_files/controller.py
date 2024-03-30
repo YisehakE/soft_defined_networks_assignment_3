@@ -274,7 +274,7 @@ class Controller(EventMixin):
 
           flood_act = of.ofp_action_output(port=of.OFPP_NONE)
 
-          msg = of.flood_mod(
+          msg = of.flow_mod(
               match = block,
               priority = PRIORITY_FW,
               actions = [flood_act],
